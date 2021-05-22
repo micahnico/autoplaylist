@@ -3,29 +3,29 @@ package spotifyplaylist
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os/exec"
 	"runtime"
+	"strings"
+	"time"
 
 	"github.com/zmb3/spotify"
 )
 
 var (
 	ch    = make(chan *spotify.Client)
-	state = "abc123"
+	state = randStringRunes(42)
 )
 var auth spotify.Authenticator
 
 func ConnectAccount(redirectURI string, clientID string, secretKey string) (*spotify.Client, error) {
-	auth = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadPrivate)
+	auth = spotify.NewAuthenticator(redirectURI, spotify.ScopePlaylistReadPrivate, spotify.ScopePlaylistModifyPrivate, spotify.ScopeUserTopRead, spotify.ScopeUserLibraryRead)
 	auth.SetAuthInfo(clientID, secretKey)
 
 	// start an HTTP server to authenticate
-	// TODO: make the /callback dynamic alongwith redirectURI
-	http.HandleFunc("/callback", completeAuth)
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Got request for:", r.URL.String())
-	})
+	callbackEndpoint := strings.Split(redirectURI, "/")[3]
+	http.HandleFunc(fmt.Sprintf("/%v", callbackEndpoint), completeAuth)
 	go http.ListenAndServe(":8080", nil)
 
 	url := auth.AuthURL(state)
@@ -69,4 +69,15 @@ func openBrowser(url string) error {
 		return err
 	}
 	return nil
+}
+
+func randStringRunes(n int) string {
+	rand.Seed(time.Now().UnixNano())
+	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }

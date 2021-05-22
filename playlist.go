@@ -1,7 +1,9 @@
 package spotifyplaylist
 
-import "fmt"
+import (
+	"fmt"
+)
 
-func pTest() {
-	fmt.Println("Hello world")
+func hello() {
+	fmt.Println("hello world")
 }
