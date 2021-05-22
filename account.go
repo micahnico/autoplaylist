@@ -1,7 +1,11 @@
 package spotifyplaylist
 
-import "fmt"
+import (
+	"github.com/zmb3/spotify"
+)
 
-func accountPlaceholderFunction() {
-	fmt.Println("this is where account stuff will be initialized")
+func ConnectAccount(url string, clientID string, secretKey string) {
+	auth := spotify.NewAuthenticator(url, spotify.ScopeUserReadPrivate)
+	auth.SetAuthInfo(clientID, secretKey)
+	// TODO: finish setting this up
 }
