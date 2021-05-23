@@ -43,13 +43,6 @@ func (p *AutoPlaylist) Create() error {
 	}
 	artists = append(artists, convertToSimpleArtists(topArtistsPage.Artists)...)
 
-	// get followed artists
-	followedArtistsPage, err := p.spotifyClient.CurrentUsersFollowedArtists()
-	if err != nil {
-		return err
-	}
-	artists = append(artists, convertToSimpleArtists(followedArtistsPage.Artists)...)
-
 	// get top tracks
 	topTracksPage, err := p.spotifyClient.CurrentUsersTopTracks()
 	if err != nil {
@@ -57,18 +50,20 @@ func (p *AutoPlaylist) Create() error {
 	}
 	tracks = append(tracks, convertFromFullToSimpleTracks(topTracksPage.Tracks)...)
 
-	// get saved tracks
-	savedTracksPage, err := p.spotifyClient.CurrentUsersTracks()
+	// get saved tracks and artists
+	savedTracks, err := p.spotifyClient.CurrentUsersTracks()
+	tempArtists, tempTracks, err := p.getArtistsAndTracksFromSavedTracks(savedTracks)
 	if err != nil {
 		return err
 	}
-	tracks = append(tracks, convertFromSavedToSimpleTracks(savedTracksPage.Tracks)...)
-
-	// TODO: use GetRelatedArtists(id) on artists
+	artists = append(artists, tempArtists...)
+	tracks = append(tracks, tempTracks...)
 
 	// get the seeds and set options for the playlist
-	artistIDs := convertFromSimpleArtistsToIDs(artists)
-	trackIDs := convertFromSimpleTracksToIDs(tracks)
+	artistIDs := convertFromSimpleArtistsToIDs(uniqueArtists(artists))
+	trackIDs := convertFromSimpleTracksToIDs(uniqueTracks(tracks))
+
+	// TODO: choose at random 2 artists and 3 tracks 5x to get recommendations for
 	playlistSeeds := spotify.Seeds{
 		Artists: artistIDs,
 		Tracks:  trackIDs,
@@ -93,13 +88,21 @@ func (p *AutoPlaylist) getArtistsAndTracksFromPlaylists(playlists []spotify.Simp
 	var returnTracks []spotify.SimpleTrack
 
 	for _, playlist := range playlists {
-		page, err := p.spotifyClient.GetPlaylistTracks(playlist.ID)
+		tracks, err := p.spotifyClient.GetPlaylistTracks(playlist.ID)
 		if err != nil {
 			return nil, nil, err
 		}
-		pTracks := page.Tracks
-		for _, track := range pTracks {
-			returnTracks = append(returnTracks, track.Track.SimpleTrack)
+
+		// each page only has up to 100 results so go through all of them
+		for page := 1; ; page++ {
+			err = p.spotifyClient.NextPage(tracks)
+			if err == spotify.ErrNoMorePages {
+				break
+			}
+			if err != nil {
+				return nil, nil, err
+			}
+			returnTracks = append(returnTracks, convertFromPlaylistToSimpleTracks(tracks.Tracks)...)
 		}
 	}
 
@@ -109,5 +112,31 @@ func (p *AutoPlaylist) getArtistsAndTracksFromPlaylists(playlists []spotify.Simp
 		}
 	}
 
-	return returnArtists, returnTracks, nil
+	return uniqueArtists(returnArtists), uniqueTracks(returnTracks), nil
+}
+
+func (p *AutoPlaylist) getArtistsAndTracksFromSavedTracks(savedTracks *spotify.SavedTrackPage) ([]spotify.SimpleArtist, []spotify.SimpleTrack, error) {
+	var err error
+	var returnArtists []spotify.SimpleArtist
+	var returnTracks []spotify.SimpleTrack
+
+	// each page only has up to 100 results so go through all of them
+	for page := 1; ; page++ {
+		err = p.spotifyClient.NextPage(savedTracks)
+		if err == spotify.ErrNoMorePages {
+			break
+		}
+		if err != nil {
+			return nil, nil, err
+		}
+		returnTracks = append(returnTracks, convertFromSavedToSimpleTracks(savedTracks.Tracks)...)
+	}
+
+	for _, track := range returnTracks {
+		for _, artist := range track.Artists {
+			returnArtists = append(returnArtists, artist)
+		}
+	}
+
+	return uniqueArtists(returnArtists), uniqueTracks(returnTracks), nil
 }

@@ -26,6 +26,14 @@ func convertFromSavedToSimpleTracks(list []spotify.SavedTrack) []spotify.SimpleT
 	return result
 }
 
+func convertFromPlaylistToSimpleTracks(list []spotify.PlaylistTrack) []spotify.SimpleTrack {
+	result := make([]spotify.SimpleTrack, len(list))
+	for i, item := range list {
+		result[i] = item.Track.SimpleTrack
+	}
+	return result
+}
+
 func convertFromSimpleArtistsToIDs(list []spotify.SimpleArtist) []spotify.ID {
 	result := make([]spotify.ID, len(list))
 	for i, item := range list {
@@ -40,4 +48,28 @@ func convertFromSimpleTracksToIDs(list []spotify.SimpleTrack) []spotify.ID {
 		result[i] = item.ID
 	}
 	return result
+}
+
+func uniqueArtists(artistSlice []spotify.SimpleArtist) []spotify.SimpleArtist {
+	keys := make(map[spotify.ID]bool)
+	list := []spotify.SimpleArtist{}
+	for _, entry := range artistSlice {
+		if _, value := keys[entry.ID]; !value {
+			keys[entry.ID] = true
+			list = append(list, entry)
+		}
+	}
+	return list
+}
+
+func uniqueTracks(trackSlice []spotify.SimpleTrack) []spotify.SimpleTrack {
+	keys := make(map[spotify.ID]bool)
+	list := []spotify.SimpleTrack{}
+	for _, entry := range trackSlice {
+		if _, value := keys[entry.ID]; !value {
+			keys[entry.ID] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }
