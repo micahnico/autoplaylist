@@ -1,4 +1,4 @@
-module github.com/micahnico/spotifyplaylist
+module github.com/micahnico/autoplaylist
 
 go 1.16
 

@@ -73,3 +73,10 @@ func uniqueTracks(trackSlice []spotify.SimpleTrack) []spotify.SimpleTrack {
 	}
 	return list
 }
+
+func remove(s []spotify.ID, i int) ([]spotify.ID, spotify.ID) {
+	item := s[i]
+	s[i] = s[len(s)-1]
+	// We do not need to put s[i] at the end, as it will be discarded anyway
+	return s[:len(s)-1], item
+}
