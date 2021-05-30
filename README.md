@@ -5,7 +5,7 @@
 &nbsp;
 
 **Notes:**
-1. It uses [github.com/zmb3/spotify](github.com/zmb3/spotify)
+1. It uses [github.com/zmb3/spotify](https://github.com/zmb3/spotify)
 2. It requires that you have an authenticated spotify client with the correct permissions to pass into the function.
 3. The range for the number of the new playlist's tracks is 5 to 500.
 
