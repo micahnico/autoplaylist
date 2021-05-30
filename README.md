@@ -1,6 +1,30 @@
 # AutoPlaylist (for Spotify)
 
-### This is a go package that will create a Spotify playlist based on your saved artists, saved tracks, tracks from your playlists, and your top tracks and artists.
+### This is a Go package that will create a Spotify playlist based on saved artists, saved tracks, tracks from playlists, and top tracks and artists. It also has an option to create a new playlist based off of only one existing playlist.
 
-It requires that you have a spotify client to pass into the constructor.
-Can be request heavy depending on how many tracks you have. A library of around 5,000 tracks (saved and in playlists) could use a max of around 100 requests to the client.
+&nbsp;
+
+**Notes:**
+1. It requires that you have a spotify client to pass into the function.
+2. The range for the number of the new playlist's tracks is 5 to 500.
+
+
+&nbsp;
+## Example for whole music library
+```go
+	p, err := autoplaylist.NewAutoPlaylist(client, "name", "description", 100, "")
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("success:", p.ID)
+	}
+```
+## Example for one playlist
+```go
+	p, err := autoplaylist.NewAutoPlaylist(client, "name", "description", 100, "3hPeTyReRDrbVqtUHvwfSp")
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("success:", p.ID)
+	}
+```

@@ -15,50 +15,45 @@ type AutoPlaylist struct {
 	playlistID    spotify.ID
 }
 
-func NewAutoPlaylist(client *spotify.Client, name string, description string, numTracks int, playlistID spotify.ID) *AutoPlaylist {
-	p := new(AutoPlaylist)
-	p.spotifyClient = client
-	p.name = name
-	p.description = description
-	p.setNumTracks(numTracks)
-	p.playlistID = playlistID
-	return p
-}
-
-func (p *AutoPlaylist) setNumTracks(num int) {
-	if num < 1 {
-		num = 1
-	}
-	if num > 100 {
-		num = 100
-	}
-	p.numTracks = num
-}
-
-func (p *AutoPlaylist) Create() error {
+func NewAutoPlaylist(client *spotify.Client, name string, description string, numTracks int, playlistID spotify.ID) (*spotify.FullPlaylist, error) {
 	var artists []spotify.SimpleArtist
 	var tracks []spotify.SimpleTrack
 	var err error
 
+	// make sure number of tracks is within Spotify's possible range
+	if numTracks < 5 || numTracks > 500 {
+		return nil, err
+	}
+
+	// set up the new playlist info
+	p := AutoPlaylist{
+		spotifyClient: client,
+		name:          name,
+		description:   description,
+		numTracks:     numTracks,
+		playlistID:    playlistID,
+	}
+
+	// if playlist id isn't specified, then use the user's whole library
 	if p.playlistID == "" {
 		// get artists and tracks from playlists
 		currPlaylists, err := p.spotifyClient.CurrentUsersPlaylists()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		artists, tracks, err = p.getArtistsAndTracksFromPlaylists(currPlaylists.Playlists)
 
 		// get top artists
 		topArtistsPage, err := p.spotifyClient.CurrentUsersTopArtists()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		artists = append(artists, convertToSimpleArtists(topArtistsPage.Artists)...)
 
 		// get top tracks
 		topTracksPage, err := p.spotifyClient.CurrentUsersTopTracks()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		tracks = append(tracks, convertFromFullToSimpleTracks(topTracksPage.Tracks)...)
 
@@ -66,22 +61,22 @@ func (p *AutoPlaylist) Create() error {
 		savedTracks, err := p.spotifyClient.CurrentUsersTracks()
 		tempArtists, tempTracks, err := p.getArtistsAndTracksFromSavedTracks(savedTracks)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		artists = append(artists, tempArtists...)
 		tracks = append(tracks, tempTracks...)
 	} else {
+		// get stuff from one playlist if they pass in an id
 		artists, tracks, err = p.getArtistsAndTracksFromPlaylist(p.playlistID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	// get stuff from one playlist
-
+	// get the new tracks for the playlist that will be created
 	playlistTracks, err := p.getNewTracks(artists, tracks)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// create a new playlist and populate it
@@ -89,10 +84,10 @@ func (p *AutoPlaylist) Create() error {
 	newPlaylist, err := p.spotifyClient.CreatePlaylistForUser(currentUser.ID, p.name, p.description, false)
 	_, err = p.spotifyClient.AddTracksToPlaylist(newPlaylist.ID, convertFromSimpleTracksToIDs(playlistTracks)...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return newPlaylist, nil
 }
 
 func (p *AutoPlaylist) getArtistsAndTracksFromPlaylist(playlistID spotify.ID) ([]spotify.SimpleArtist, []spotify.SimpleTrack, error) {
